@@ -40,7 +40,9 @@
 ## What This Does
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
+## What This Does
 
+FitFindr takes a plain-language request for a thrifted clothing item, such as a vintage graphic tee under $30. It searches a listings dataset using the requested description, size, and maximum price, then selects the best match. The agent uses the user's wardrobe to suggest outfits around that item and generates a short fit-card caption. If no listings match, it stops before the later tools and tells the user which search constraints they could loosen.
 
 
 ---
@@ -224,15 +226,15 @@ Scored these vintage Levi's 501 Jeans on depop today for just $38.00 and they ho
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- **What I asked for:** I wrote the Tool Inventory and pseudocode for the three tools first, then asked Claude to help turn that structure into working Python in `tools.py`.
+- **What came back:** It produced implementations for `search_listings`, `suggest_outfit`, and `create_fit_card`, including keyword scoring, size matching, model prompts, and empty-case handling.
+- **What I changed:** I checked the code against my own Tool Inventory, kept the return shapes and branch behavior I had specified, and tested each tool separately from the terminal, including the empty-wardrobe case.
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+- **What I asked for:** I asked ChatGPT to help me reason through how the planning loop and session state should work in `agent.py`.
+- **What came back:** It explained the branch structure and why each tool result should be stored in the session and then read back out by the next step instead of being passed only through temporary variables.
+- **What I changed:** I implemented the loop so an empty search stops early with a useful message, while a successful search stores the selected item in the session and carries it through `suggest_outfit` and `create_fit_card`. I then tested both the successful and no-results paths.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 

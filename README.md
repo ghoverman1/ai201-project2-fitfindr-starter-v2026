@@ -40,7 +40,6 @@
 ## What This Does
 
 <!-- Three or four sentences: what a user asks for, and what they get back. -->
-## What This Does
 
 FitFindr takes a plain-language request for a thrifted clothing item, such as a vintage graphic tee under $30. It searches a listings dataset using the requested description, size, and maximum price, then selects the best match. The agent uses the user's wardrobe to suggest outfits around that item and generates a short fit-card caption. If no listings match, it stops before the later tools and tells the user which search constraints they could loosen.
 

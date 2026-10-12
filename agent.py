@@ -109,6 +109,7 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    trace.start_trace()
 
     # Parse price
     price_match = re.search(r"under\s*\$?(\d+(?:\.\d+)?)", query, re.IGNORECASE)
@@ -135,44 +136,81 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     step = "search"
     iterations = 0
 
-    while True:
-        iterations += 1
-        trace.check_iterations(iterations)
+    try:
+        while True:
+            iterations += 1
+            trace.check_iterations(iterations)
 
-        if step == "search":
-            session["search_results"] = call_tool(
-                "search_listings",
-                {
-                    "description": session["parsed"]["description"],
-                    "size": session["parsed"]["size"],
-                    "max_price": session["parsed"]["max_price"],
-                },
-            )
+            if step == "search":
+                session["search_results"] = call_tool(
+                    "search_listings",
+                    {
+                        "description": session["parsed"]["description"],
+                        "size": session["parsed"]["size"],
+                        "max_price": session["parsed"]["max_price"],
+                    },
+                )
+                trace.step(
+                    "search_listings (via MCP)",
+                    inputs=(
+                        f"description={session['parsed']['description']!r}, "
+                        f"size={session['parsed']['size']!r}, "
+                        f"max_price={session['parsed']['max_price']!r}"
+                    ),
+                    returned=session["search_results"],
+                    note="branch: results found, continuing"
+                    if session["search_results"]
+                    else "branch: empty, stopping",
+                )
 
-            # The branch: nothing found means stop here, before any model call.
-            if not session["search_results"]:
-                session["error"] = (
-                    "No listings matched. Try raising your maximum price, "
-                    "removing the size filter, or using broader search terms."
+                # The branch: nothing found means stop here, before any model call.
+                if not session["search_results"]:
+                    session["error"] = (
+                        "No listings matched. Try raising your maximum price, "
+                        "removing the size filter, or using broader search terms."
+                    )
+                    return session
+
+                session["selected_item"] = session["search_results"][0]
+                step = "outfit"
+
+            elif step == "outfit":
+                session["outfit_suggestion"] = suggest_outfit(
+                    session["selected_item"],
+                    session["wardrobe"],
+                )
+                trace.step(
+                    "suggest_outfit",
+                    inputs=(
+                        f"new_item={session['selected_item']['id']}, "
+                        f"wardrobe_items={len(session['wardrobe'].get('items', []))}"
+                    ),
+                    returned=session["outfit_suggestion"],
+                )
+                step = "fit_card"
+
+            elif step == "fit_card":
+                session["fit_card"] = create_fit_card(
+                    session["outfit_suggestion"],
+                    session["selected_item"],
+                )
+                trace.step(
+                    "create_fit_card",
+                    inputs=f"new_item={session['selected_item']['id']}",
+                    returned=session["fit_card"],
                 )
                 return session
 
-            session["selected_item"] = session["search_results"][0]
-            step = "outfit"
-
-        elif step == "outfit":
-            session["outfit_suggestion"] = suggest_outfit(
-                session["selected_item"],
-                session["wardrobe"],
-            )
-            step = "fit_card"
-
-        elif step == "fit_card":
-            session["fit_card"] = create_fit_card(
-                session["outfit_suggestion"],
-                session["selected_item"],
-            )
-            return session
+    except ModelUnavailable:
+        session["error"] = (
+            "The model could not be reached. Check your API key or try again later."
+        )
+        trace.step(
+            "model unavailable",
+            returned=session["error"],
+            note="stopping",
+        )
+        return session
 
 
 # ── running it directly ───────────────────────────────────────────────────────

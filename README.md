@@ -317,13 +317,26 @@ that produced it:
 
 **Happy path**
 
-```
-
-```
+[1] search_listings (via MCP)
+      in:  description='vintage graphic tee', size=None, max_price=30.0
+      out: 10 items: Y2K Baby Tee — Butterfly Print, Graphic Tee — 2003 Tour Bootleg Style, Vintage Band Tee — Faded Grey … +7 more
+      →    branch: results found, continuing
+[2] suggest_outfit
+      in:  new_item=lst_002, wardrobe_items=10
+      out: **Outfit 1 (Streetwear Y2K):** Pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark…
+[3] create_fit_card
+      in:  new_item=lst_002
+      out: Found this little butterfly print baby tee scrolling on depop for just eighteen bucks and I am obsessed. It’s …
 
 **Empty search**
 
 ```
+[1] search_listings (via MCP)
+      in:  description='designer ballgown', size='XXS', max_price=5.0
+      out: [] (empty)
+      →    branch: empty, stopping
+
+  No listings matched. Try raising your maximum price, removing the size filter, or using broader search terms.
 
 ```
 
@@ -331,7 +344,7 @@ that produced it:
 behaved differently afterwards. If the rewire didn't work, say exactly where it
 broke — the error text and the last thing that worked. That earns the point in
 full. -->
-
+I moved `search_listings` from a direct Python call to an MCP tool call through `mcp_client.call_tool`. The inputs and returned listings stayed the same, and both the normal query and empty-search branch behaved the same after the change.
 
 
 ---

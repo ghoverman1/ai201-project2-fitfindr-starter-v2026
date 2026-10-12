@@ -268,6 +268,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         f"How they're wearing it:\n{outfit}\n\n"
         f"Write the caption. Mention the item, the price "
         f"(${new_item['price']:.2f}), and the platform ({new_item['platform']}) "
-        "once each."
+        "once each. Include at least one of these style tags exactly as written: "
+        f"{', '.join(new_item['style_tags'])}."
     )
     return generate(prompt, system=system)

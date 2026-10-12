@@ -20,9 +20,59 @@ That last line is what your loop branches on. "Returns a list" earns nothing —
 the description has to say what is *in* the list.
 """
 
-import config  # noqa: F401 — you'll use this in search_listings
+import re
+
+import config
 from generate import generate
 from utils.data_loader import load_listings
+
+
+# Words that carry no meaning for matching. Without these, "a" or "for" in the
+# description would score against almost every listing.
+_STOPWORDS = {
+    "a", "an", "and", "the", "for", "with", "in", "on", "of", "to", "or",
+    "some", "something", "looking", "want", "need", "i", "im", "my",
+}
+
+
+def _words(text: str) -> set[str]:
+    """Lowercase word tokens, minus stopwords."""
+    return set(re.findall(r"[a-z0-9']+", text.lower())) - _STOPWORDS
+
+
+def _size_matches(wanted: str, listing_size: str) -> bool:
+    """
+    True when `wanted` is one of the listing's size tokens.
+
+    Tokens come from splitting on "/" and spaces, so "M" matches "S/M" and
+    "M/L" but not "XL" or "US 9". A whole-string match counts too, so "US 9"
+    matches "US 9". "One Size" listings match any size.
+    """
+    wanted = wanted.strip().lower()
+    have = listing_size.strip().lower()
+    if have.startswith("one size"):
+        return True
+    if wanted == have:
+        return True
+    return wanted in re.split(r"[/\s]+", have)
+
+
+def _describe_item(item: dict) -> str:
+    """The listing as prompt text. Brand is left out when it's missing."""
+    lines = [
+        f"Title: {item['title']}",
+        f"Category: {item['category']}",
+        f"Description: {item['description']}",
+        f"Colors: {', '.join(item['colors'])}",
+        f"Style: {', '.join(item['style_tags'])}",
+        f"Size: {item['size']}",
+        f"Condition: {item['condition']}",
+        f"Price: ${item['price']:.2f}",
+        f"Platform: {item['platform']}",
+    ]
+    if item.get("brand"):
+        lines.insert(1, f"Brand: {item['brand']}")
+    return "\n".join(lines)
 
 
 # ── Tool 1: search_listings ───────────────────────────────────────────────────
@@ -78,8 +128,30 @@ def search_listings(
     Test it from a terminal before you move on:
         python -c "from tools import search_listings; print(search_listings('graphic tee', max_price=30))"
     """
-    # TODO: replace this with your implementation
-    return []
+    wanted = _words(description)
+    if not wanted:
+        return []
+
+    scored = []
+    for listing in load_listings():
+        if max_price is not None and listing["price"] > max_price:
+            continue
+        if size and not _size_matches(size, listing["size"]):
+            continue
+
+        searchable = " ".join([
+            listing["title"],
+            listing["description"],
+            listing["category"],
+            " ".join(listing["style_tags"]),
+            " ".join(listing["colors"]),
+        ])
+        score = len(wanted & _words(searchable))
+        if score > 0:
+            scored.append((score, listing))
+
+    scored.sort(key=lambda pair: pair[0], reverse=True)
+    return [listing for _, listing in scored[:config.SEARCH_RESULT_LIMIT]]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -112,8 +184,39 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    system = (
+        "You are a thrift stylist. Suggest one or two complete outfits built "
+        "around the thrifted item. Be concrete about colors and fit. Keep it "
+        "under 120 words. No preamble."
+    )
+    items = wardrobe.get("items") or []
+
+    if items:
+        closet = "\n".join(
+            f"- {w['name']} ({w['category']}; colors: {', '.join(w['colors'])}; "
+            f"style: {', '.join(w['style_tags'])})"
+            + (f" — {w['notes']}" if w.get("notes") else "")
+            for w in items
+        )
+        prompt = (
+            f"Thrifted item:\n{_describe_item(new_item)}\n\n"
+            f"Pieces the user already owns:\n{closet}\n\n"
+            "Suggest outfits that pair the thrifted item with pieces from this "
+            "list, naming each piece exactly as written. Only use pieces from "
+            "the list."
+        )
+    else:
+        prompt = (
+            f"Thrifted item:\n{_describe_item(new_item)}\n\n"
+            "The user hasn't added any clothes to their wardrobe yet. Give "
+            "general styling ideas for this item: what kinds of pieces, colors, "
+            "and shoes it goes with."
+        )
+
+    suggestion = generate(prompt, system=system)
+    if not suggestion.strip():
+        return f"Style the {new_item['title']} with simple basics in neutral colors."
+    return suggestion
 
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
@@ -152,5 +255,19 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     Test it from a terminal before you move on:
         python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
     """
-    # TODO: replace this with your implementation
-    return ""
+    if not outfit or not outfit.strip():
+        return "No outfit suggestion to build a fit card from."
+
+    system = (
+        "You write captions people post about their thrift finds. Casual, "
+        "first person, specific about the vibe. Two to four sentences. No "
+        "hashtag walls, no product-listing language."
+    )
+    prompt = (
+        f"The find:\n{_describe_item(new_item)}\n\n"
+        f"How they're wearing it:\n{outfit}\n\n"
+        f"Write the caption. Mention the item, the price "
+        f"(${new_item['price']:.2f}), and the platform ({new_item['platform']}) "
+        "once each."
+    )
+    return generate(prompt, system=system)

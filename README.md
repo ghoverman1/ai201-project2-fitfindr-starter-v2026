@@ -130,7 +130,9 @@ outfit and the same item to `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which --> model 
+**How the query is parsed:** Regex extracts `size` and `max_price` from the query. Those phrases are removed, and the remaining text becomes the search description.
+`max_price`, `size X` becomes `size`, and whatever is left after removing those
+two phrases is the `description`. A query with neither phrase is searched as-is. 
 
 **What moves through the session:** In order: `query` → `parsed`
 (`description`, `size`, `max_price`) → `search_results` → `selected_item` →
@@ -154,6 +156,36 @@ $ python app.py ask '...'
 
 [Fill this in after Milestone 5, once the planning loop is wired together.]
 ```
+(.venv) georgehoverman@Georges-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python agent.py
+=== A query the data can match ===
+  found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+  outfit:   **Outfit 1 (Streetwear Y2K):**
+Pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash. Layer the vintage black denim jacket on top. Finish with the chunky white sneakers and the black crossbody bag for an effortless, high-contrast look that balances the cropped fit with relaxed denim.
+
+**Outfit 2 (Edgy Grunge Mix):**
+Tuck the Y2K Baby Tee — Butterfly Print into the wide-leg khaki trousers, secured with the brown leather belt. Throw the oversized grey crewneck sweatshirt over your shoulders or wear it unzipped with the black cropped zip hoodie underneath, and ground the outfit using the black combat boots for a cool, textural contrast.
+  fit card: Found this little butterfly print baby tee scrolling on depop for just eighteen bucks and I am obsessed. It’s got that tiny early-2000s crop that looks so good thrown on with baggy jeans and chunky sneakers. Total main character energy for under twenty dollars.
+
+=== A query it can't ===
+  stopped: No listings matched. Try raising your maximum price, removing the size filter, or using broader search terms.
+  fit_card is None — it should still be None here
+
+The second one should stop before the fit card. If both paths look the same,
+the branch isn't doing anything yet.
+(.venv) georgehoverman@Georges-MacBook-Pro ai201-project2-fitfindr-starter-v2026 % python app.py ask 'vintage graphic tee under $30'
+
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   **Outfit 1 (Streetwear Y2K):**
+Pair the Y2K Baby Tee — Butterfly Print with the baggy straight-leg jeans, dark wash. Layer the vintage black denim jacket on top. Finish with the chunky white sneakers and the black crossbody bag for an effortless, high-contrast look that balances the cropped fit with relaxed denim.
+
+**Outfit 2 (Edgy Grunge Mix):**
+Tuck the Y2K Baby Tee — Butterfly Print into the wide-leg khaki trousers, secured with the brown leather belt. Throw the oversized grey crewneck sweatshirt over your shoulders or wear it unzipped with the black cropped zip hoodie underneath, and ground the outfit using the black combat boots for a cool, textural contrast.
+
+  Fit card: Found this little butterfly print baby tee scrolling on depop for just eighteen bucks and I am obsessed. It’s got that tiny early-2000s crop that looks so good thrown on with baggy jeans and chunky sneakers. Total main character energy for under twenty dollars.
+
+0 model calls this session, 2 served from cache
+
 
 **The three tools, tested one at a time**
 

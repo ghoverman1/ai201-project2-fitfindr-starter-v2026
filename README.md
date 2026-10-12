@@ -289,16 +289,19 @@ that produced it:
      Look for a pattern. Three misses on the same tool is one problem, not
      three. -->
 
+## Verdicts and Diagnoses
+
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|
-| 1 |  |  |  |  |
-| 2 |  |  |  |  |
-| 3 |  |  |  |  |
-| 4 |  |  |  |  |
-| 5 |  |  |  |  |
+| 1 | Matching query completes all three tools | 4 of 5 | MET (5/5) | All five matching-query tries completed search, outfit suggestion, and fit-card generation. |
+| 2 | Impossible query stops before the second tool | 5 of 5 | MET (5/5) | All five impossible-query tries stopped after `search_listings` and returned a useful message. |
+| 3 | Same selected listing ID reaches `suggest_outfit` | 5 of 5 | MET (5/5) | The selected item and the item passed into `suggest_outfit` remained the same listing ID in every try. |
+| 4 | Fit card includes at least one selected `style_tag` | 4 of 5 | MISSED (1/5) | Only one of the five baseline fit cards used an exact style tag from the selected listing. |
+| 5 | Requested size matches selected listing | 5 of 5 | MET (5/5) | All five size-M searches selected the size-M track jacket. |
 
 **Diagnoses**
 
+Criterion 4 failed at the model-output step in `create_fit_card`. The selected listing had style tags including `y2k`, `vintage`, `graphic tee`, and `cottagecore`, but the prompt did not require the model to preserve one of those tags exactly. The model often paraphrased `y2k` as phrases such as "early 2000s," which preserved the meaning but did not satisfy the criterion.
 
 
 ---
@@ -351,41 +354,29 @@ I moved `search_listings` from a direct Python call to an MCP tool call through 
 
 ## The Improvement
 
-<!-- What you changed, why your diagnosis pointed at it, and the after-run in
-     the same table format. One change, measured properly.
+**What I changed:**  
+I changed the `create_fit_card` prompt so that it explicitly asks the model to include at least one of the selected listing's `style_tags` exactly as written.
 
-     `python run_eval.py --label after` -->
-
-**What I changed:**
-
-**Which failure it was meant to fix:**
+**Which failure it was meant to fix:**  
+Criterion 4 missed because the model frequently paraphrased the item's style instead of using an exact style tag.
 
 ### Run Log — After
 
 | Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1.  |  |  |  |  |  |  |  |
-| 2.  |  |  |  |  |  |  |  |
-| 3.  |  |  |  |  |  |  |  |
-| 4.  |  |  |  |  |  |  |  |
-| 5.  |  |  |  |  |  |  |  |
+| 1. Matching query completes | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. Impossible query stops early | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. Selected item state handoff | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 4. Fit card preserves style | 4 of 5 | PASS | PASS | PASS | FAIL | PASS | MET (4/5) |
+| 5. Requested size matches | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
 
-**Did it help, and how do I know:**
-
-<!-- If it made things worse, say that. Honestly reported, that earns full
-     credit and is more interesting than one that worked. -->
-
-
-
+**Did it help, and how do I know:**  
+Yes. Criterion 4 improved from 1 of 5 successful tries before the prompt change to 4 of 5 afterward, meeting the original target. The other four criteria remained met.
 ---
 
 ## What's Still Broken
 
-<!-- For each criterion still missed: what you'd do, and why you stopped where
-     you did. "I ran out of time" is fine if it's true. Pretending nothing is
-     left is not. -->
-
-
+One of the five after-run fit cards still paraphrased the style as "early 2000s" instead of using one of the exact style tags, so the prompt does not guarantee exact tag preservation. A future improvement could validate the generated caption and add a style tag deterministically if none appears. I stopped after one improvement because this unit asks for one change measured before and after.
 
 <!-- ═════════════════════════════════════════════════════════════════════
 

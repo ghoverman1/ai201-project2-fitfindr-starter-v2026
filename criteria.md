@@ -29,6 +29,7 @@ tool calls and returns a fit card — in at least 4 of 5 tries.
      "my search is a plain keyword match and some phrasings will miss" is a
      real answer. -->
 
+4/5 is reasonable because the search uses plain keyword matching, so one phrasing may miss even when the agent usually works.
 ---
 
 ## 2. An impossible query stops before the second tool
@@ -40,6 +41,7 @@ Given a query that matches no listings, the agent stops before calling
 <!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
      about this path? -->
 
+5/5 is reasonable because the empty-search branch is deterministic code; if there are no results, it should always stop before calling the next tool.
 ---
 
 ## 3. Something about state
@@ -54,9 +56,12 @@ Given a query that matches no listings, the agent stops before calling
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
 
+The same listing ID selected by `search_listings` is the item passed to `suggest_outfit` in 5 out of 5 tries.
+
+**Why this target:**  
+The session state should carry the selected item deterministically. If a different listing reaches `suggest_outfit`, that means the state handoff is broken.
 
 
-**Why this target:**
 
 
 
@@ -75,10 +80,10 @@ Given a query that matches no listings, the agent stops before calling
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
 
+In at least 4 out of 5 tries, the fit card includes at least one `style_tag` from the selected listing.
 
-
-**Why this target:**
-
+**Why this target:**  
+The model may phrase the fit card differently each time, but it should still preserve a concrete style signal from the item that was actually selected. I chose 4 out of 5 to allow for some variation in model-generated wording.
 
 
 ---
@@ -92,9 +97,10 @@ Given a query that matches no listings, the agent stops before calling
      search respects a price ceiling — anything, as long as it names a number
      or an observable outcome. -->
 
+When the user specifies a size, the selected listing matches that requested size in 5 out of 5 tries.
 
-
-**Why this target:**
+**Why this target:**  
+Size filtering is handled by regular code rather than model generation, so it should behave deterministically and should not return a listing in the wrong size.
 
 
 

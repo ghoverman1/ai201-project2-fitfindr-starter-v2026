@@ -289,7 +289,6 @@ that produced it:
      Look for a pattern. Three misses on the same tool is one problem, not
      three. -->
 
-## Verdicts and Diagnoses
 
 | # | Criterion | Target | Verdict | How I decided |
 |---|---|---|---|---|

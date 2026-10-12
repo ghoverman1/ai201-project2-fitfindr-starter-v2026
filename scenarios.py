@@ -47,6 +47,27 @@ SCENARIOS = [
     # For a fit-card criterion, you probably want the SAME query listed more
     # than once, or several different items, depending on what your criterion
     # actually says.
+        {
+        # Criterion 3: the same selected listing should flow through session state.
+        "name": "selected item state handoff",
+        "query": "vintage graphic tee under $30",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Criterion 4: the generated fit card should preserve a style tag.
+        "name": "fit card preserves style",
+        "query": "vintage graphic tee under $30",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Criterion 5: an explicit size request should return a matching size.
+        "name": "requested size matches",
+        "query": "90s track jacket size M",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
 ]
 
 WARDROBES = ("example", "empty")
